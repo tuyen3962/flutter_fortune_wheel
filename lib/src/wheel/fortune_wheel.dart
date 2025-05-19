@@ -150,6 +150,8 @@ class FortuneWheel extends HookWidget implements FortuneWidget {
   /// a section border is crossed.
   final ValueChanged<int>? onFocusItemChanged;
 
+  final int? initialIndex;
+
   double _getAngle(double progress) {
     return 2 * _math.pi * rotationCount * progress;
   }
@@ -180,6 +182,7 @@ class FortuneWheel extends HookWidget implements FortuneWidget {
     PanPhysics? physics,
     this.onFling,
     this.onFocusItemChanged,
+    this.initialIndex,
   })  : physics = physics ?? CircularPanPhysics(),
         assert(items.length > 1),
         super(key: key);
@@ -243,7 +246,7 @@ class FortuneWheel extends HookWidget implements FortuneWidget {
       return null;
     }, []);
 
-    final selectedIndex = useState<int>(0);
+    final selectedIndex = useState<int>(initialIndex ?? 0);
 
     useEffect(() {
       final subscription = selected.listen((event) {
