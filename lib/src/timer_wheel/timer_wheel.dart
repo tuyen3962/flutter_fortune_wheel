@@ -16,7 +16,7 @@ part 'slice_clipper.dart';
 part 'slice_layout_delegate.dart';
 part 'slice_painter.dart';
 
-const _debounceDuration = Duration(milliseconds: 100);
+const _debounceDuration = Duration(milliseconds: 10);
 
 Offset _calculateWheelOffset(
     BoxConstraints constraints, TextDirection textDirection) {
@@ -250,10 +250,10 @@ class TimerWheel extends HookWidget implements FortuneWidget {
       await Future.microtask(() => onAnimationStart?.call());
       // await rotateAnimCtrl.forward(from: 0);
       _timerAnimation = Timer.periodic(_debounceDuration, (timer) {
-        currentAnimationProgress.value =
-            (timer.tick * _debounceDuration.inMilliseconds) /
-                duration.inMilliseconds;
-        if (currentAnimationProgress.value >= 1) {
+        final progress = (timer.tick * _debounceDuration.inMilliseconds) /
+            duration.inMilliseconds;
+        currentAnimationProgress.value = FortuneCurve.spin.transform(progress);
+        if (progress >= 1) {
           _timerAnimation?.cancel();
           _timerAnimation = null;
           currentAnimationProgress.value = 1;
@@ -294,54 +294,59 @@ class TimerWheel extends HookWidget implements FortuneWidget {
             //   animation: rotateAnim,
             //   builder: (context, _) {
 
-            LayoutBuilder(builder: (context, constraints) {
-              final wheelData = _WheelData(
-                constraints: constraints,
-                itemCount: items.length,
-                textDirection: Directionality.of(context),
-              );
+            ValueListenableBuilder<double>(
+              valueListenable: currentAnimationProgress,
+              builder: (context, progress, child) =>
+                  LayoutBuilder(builder: (context, constraints) {
+                final wheelData = _WheelData(
+                  constraints: constraints,
+                  itemCount: items.length,
+                  textDirection: Directionality.of(context),
+                );
 
-              // final isAnimatingPanFactor =  rotateAnimCtrl.isAnimating ? 0 : 1;
-              final isAnimatingPanFactor = _timerAnimation != null ? 0 : 1;
-              final selectedAngle =
-                  -2 * _math.pi * (selectedIndex.value / items.length);
-              final panAngle =
-                  panState.distance * panFactor * isAnimatingPanFactor;
-              // final rotationAngle = _getAngle(rotateAnim.value);
-              final rotationAngle = _getAngle(currentAnimationProgress.value);
-              final alignmentOffset = _calculateAlignmentOffset(alignment);
-              final totalAngle = selectedAngle + panAngle + rotationAngle;
+                // final isAnimatingPanFactor =  rotateAnimCtrl.isAnimating ? 0 : 1;
+                final isAnimatingPanFactor = _timerAnimation != null ? 0 : 1;
+                final selectedAngle =
+                    -2 * _math.pi * (selectedIndex.value / items.length);
+                final panAngle =
+                    panState.distance * panFactor * isAnimatingPanFactor;
+                // final rotationAngle = _getAngle(rotateAnim.value);
+                final rotationAngle = _getAngle(progress);
+                final alignmentOffset = _calculateAlignmentOffset(alignment);
+                final totalAngle = selectedAngle + panAngle + rotationAngle;
+                print(totalAngle);
 
-              final focusedIndex = _borderCross(
-                totalAngle,
-                lastVibratedAngle,
-                items.length,
-                hapticImpact,
-                _animateArrow, // _tetikle fonksiyonunu burada geçiriyoruz
-              );
-              if (focusedIndex != null) {
-                onFocusItemChanged?.call(focusedIndex % items.length);
-              }
+                final focusedIndex = _borderCross(
+                  totalAngle,
+                  lastVibratedAngle,
+                  items.length,
+                  hapticImpact,
+                  _animateArrow, // _tetikle fonksiyonunu burada geçiriyoruz
+                );
+                if (focusedIndex != null) {
+                  onFocusItemChanged?.call(focusedIndex % items.length);
+                }
 
-              final transformedItems = [
-                for (var i = 0; i < items.length; i++)
-                  TransformedFortuneItem(
-                    item: items[i],
-                    angle: totalAngle +
-                        alignmentOffset +
-                        _calculateSliceAngle(i, items.length),
-                    offset: wheelData.offset,
+                final transformedItems = [
+                  for (var i = 0; i < items.length; i++)
+                    TransformedFortuneItem(
+                      item: items[i],
+                      angle: totalAngle +
+                          alignmentOffset +
+                          _calculateSliceAngle(i, items.length),
+                      offset: wheelData.offset,
+                    ),
+                ];
+
+                return SizedBox.expand(
+                  child: _CircleSlices(
+                    items: transformedItems,
+                    wheelData: wheelData,
+                    styleStrategy: styleStrategy,
                   ),
-              ];
-
-              return SizedBox.expand(
-                child: _CircleSlices(
-                  items: transformedItems,
-                  wheelData: wheelData,
-                  styleStrategy: styleStrategy,
-                ),
-              );
-            }),
+                );
+              }),
+            ),
 
             // ;},),
             for (var it in indicators)
