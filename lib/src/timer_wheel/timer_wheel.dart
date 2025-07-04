@@ -250,8 +250,9 @@ class TimerWheel extends HookWidget implements FortuneWidget {
       await Future.microtask(() => onAnimationStart?.call());
       // await rotateAnimCtrl.forward(from: 0);
       _timerAnimation = Timer.periodic(_debounceDuration, (timer) {
-        final progress = (timer.tick * _debounceDuration.inMilliseconds) /
-            duration.inMilliseconds;
+        final progress = ((timer.tick * _debounceDuration.inMilliseconds) /
+                duration.inMilliseconds)
+            .clamp(0.0, 1.0);
         currentAnimationProgress.value = FortuneCurve.spin.transform(progress);
         if (progress >= 1) {
           _timerAnimation?.cancel();
@@ -314,7 +315,6 @@ class TimerWheel extends HookWidget implements FortuneWidget {
                 final rotationAngle = _getAngle(progress);
                 final alignmentOffset = _calculateAlignmentOffset(alignment);
                 final totalAngle = selectedAngle + panAngle + rotationAngle;
-                print(totalAngle);
 
                 final focusedIndex = _borderCross(
                   totalAngle,
